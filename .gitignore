@@ -1,0 +1,7 @@
+.aider*
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+.cache/
+models/

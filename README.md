@@ -1,82 +1,144 @@
-# Previsão de Chuvas
+# Rainfall Prediction
 
-Este repositório contém um modelo de aprendizado de máquina para prever chuvas.
+Projeto de ciencia de dados para prever se chovera amanha usando dados meteorologicos historicos da Australia.
 
-## Introdução
+Este repositorio mostra a refatoracao de um projeto antigo de Deep Learning para um fluxo mais profissional de Machine Learning: prevencao de vazamento de dados, comparacao de modelos, metricas adequadas, validacao temporal, relatorios e uma pequena demo interativa.
 
-Este modelo usa dados históricos de chuvas e outras variáveis meteorológicas para prever a probabilidade de chuva em uma determinada região.
+## Por que este projeto importa
 
-## Impacto do Projeto
+Prever chuva com antecedencia pode apoiar decisoes em logistica, agricultura, construcao civil, transporte e gestao de risco climatico.
 
-Este projeto de previsão de chuvas pode ter um impacto significativo na qualidade dos serviços prestados e na segurança em áreas de risco, como desabamentos e enchentes. Com previsões precisas de chuvas, as autoridades podem tomar medidas preventivas para minimizar os danos causados por eventos climáticos extremos. Por exemplo, eles podem evacuar áreas propensas a deslizamentos de terra ou enchentes antes que ocorram, ou redirecionar o tráfego para evitar áreas perigosas.
+Mais importante do que buscar uma acuracia muito alta e construir uma avaliacao honesta: o modelo deve usar apenas informacoes que estariam disponiveis no momento real da previsao.
 
-Além disso, as empresas podem usar as previsões para planejar suas operações e minimizar interrupções. Por exemplo, as companhias aéreas podem ajustar seus horários de voo para evitar tempestades, enquanto as empresas de construção podem planejar suas atividades de acordo com as condições climáticas previstas.
+## Principal cuidado tecnico
 
-Em resumo, este projeto pode ajudar a melhorar a segurança e a qualidade dos serviços prestados em áreas afetadas por chuvas intensas, ao fornecer previsões precisas e oportunas.
+O dataset original contem a coluna `RISK_MM`, que representa a quantidade de chuva do dia seguinte. Essa variavel esta diretamente ligada ao alvo `RainTomorrow` e causaria vazamento de dados.
 
-## Resultados
+Por isso, `RISK_MM` e removida antes do treino. Sem essa correcao, o modelo poderia parecer excelente, mas nao generalizaria para um cenario real.
 
-Aqui estão algumas métricas importantes para avaliar o desempenho do nosso modelo de previsão de chuvas:
+## Estrutura
 
-- Acurácia: 0.9863567635992827
-- Matriz de Confusão:
-
-|       | Predito Não-Chuva | Predito Chuva |
-|-------|-------------------|---------------|
-| Verdadeiro Não-Chuva | 21710            | 388           |
-| Verdadeiro Chuva     | 0                | 6341          |
-
-Essas métricas mostram que o modelo tem uma alta acurácia na previsão de chuvas e que a maioria das previsões está correta, como pode ser visto na matriz de confusão.
-
-
-
-## Instalação
-
-Para usar este modelo, você precisará ter o Python 3.x instalado em seu computador. Além disso, você precisará instalar as seguintes bibliotecas:
-
-Você pode instalar essas bibliotecas usando o seguinte comando:
-
-```python
-import tensorflow as tf
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from tensorflow import keras
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-from keras.models import Sequential
-from keras.layers import Dense
-from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, accuracy_score,
+```text
+rainfall-prediction/
+|-- app.py
+|-- data/
+|   `-- database
+|-- notebooks/
+|   `-- 01_rainfall_prediction_story.ipynb
+|-- reports/
+|   |-- metrics.csv
+|   |-- temporal_metrics.csv
+|   |-- evaluation.json
+|   `-- figures/
+|-- src/
+|   |-- config.py
+|   |-- data.py
+|   |-- evaluate.py
+|   |-- features.py
+|   |-- models.py
+|   `-- train.py
+|-- tests/
+|-- requirements.txt
+`-- README.md
 ```
 
-## Uso
+O arquivo `models/rainfall_model.joblib` e gerado localmente pelo treino e nao e versionado por ser pesado.
 
-Para usar este modelo, primeiro abra o arquivo `Rain_detector.ipynb` em um ambiente Jupyter Notebook. Certifique-se de ter todas as bibliotecas necessárias instaladas.
+## Modelos comparados
 
-Em seguida, execute as células do notebook para construir e treinar o modelo. Você pode ajustar os parâmetros do modelo, como o número de épocas e o tamanho do lote, se desejar.
+O treinamento compara tres abordagens:
 
-Depois de treinar o modelo, você pode usá-lo para fazer previsões. Você pode fazer isso executando a célula apropriada no notebook ou usando o código a seguir em seu próprio script Python:
+- `DummyClassifier`: baseline minimo.
+- `Logistic Regression`: modelo linear interpretavel.
+- `Random Forest`: modelo nao linear para capturar interacoes entre variaveis meteorologicas.
 
-```python
-from rain_prediction import RainPredictor
+## Metricas
 
-# Criar uma instância do modelo
-predictor = RainPredictor()
+O projeto usa metricas mais uteis do que acuracia isolada:
 
-# Carregar os pesos treinados
-predictor.load_weights('model_weights.h5')
+- accuracy
+- precision
+- recall
+- F1-score
+- ROC-AUC
+- matriz de confusao
+- curva ROC
+- curva Precision-Recall
+- importancia de variaveis
 
-# Fazer previsões
-predictions = predictor.predict(test_data)
+Para previsao de chuva, `recall` e especialmente importante porque mede a capacidade de detectar dias em que realmente vai chover.
+
+## Resultados atuais
+
+Avaliacao com divisao estratificada de treino e teste:
+
+| Modelo | Accuracy | Precision | Recall | F1 | ROC-AUC |
+|---|---:|---:|---:|---:|---:|
+| Random Forest | 0.834 | 0.612 | 0.709 | 0.657 | 0.883 |
+| Logistic Regression | 0.794 | 0.527 | 0.777 | 0.628 | 0.873 |
+| Dummy baseline | 0.776 | 0.000 | 0.000 | 0.000 | 0.500 |
+
+Validacao temporal, treinando em dados mais antigos e testando em dados mais recentes:
+
+| Modelo | Accuracy | Precision | Recall | F1 | ROC-AUC |
+|---|---:|---:|---:|---:|---:|
+| Random Forest | 0.825 | 0.593 | 0.683 | 0.635 | 0.866 |
+| Logistic Regression | 0.788 | 0.517 | 0.752 | 0.613 | 0.858 |
+| Dummy baseline | 0.777 | 0.000 | 0.000 | 0.000 | 0.500 |
+
+Esses resultados sao mais realistas do que a acuracia anterior acima de 98%, porque removem a variavel de vazamento `RISK_MM`.
+
+## Como rodar
+
+Instale as dependencias:
+
+```bash
+pip install -r requirements.txt
 ```
 
-## Contribuindo
+Treine e avalie os modelos:
 
-Se você tiver sugestões ou melhorias para este modelo, sinta-se à vontade para enviar um pull request ou abrir uma issue.
+```bash
+python -m src.train
+```
 
-## Licença
+Rode os testes:
 
-Este projeto está licenciado sob a licença MIT.
+```bash
+python -m unittest discover
+```
 
+Abra a demo:
+
+```bash
+streamlit run app.py
+```
+
+Abra a apresentacao em notebook:
+
+```bash
+jupyter notebook notebooks/01_rainfall_prediction_story.ipynb
+```
+
+## Saidas geradas
+
+Depois do treino, o projeto cria:
+
+- `reports/metrics.csv`: comparacao dos modelos.
+- `reports/temporal_metrics.csv`: comparacao em validacao temporal.
+- `reports/evaluation.json`: metricas detalhadas.
+- `reports/figures/confusion_matrix.png`: matriz de confusao.
+- `reports/figures/roc_curve.png`: curva ROC.
+- `reports/figures/precision_recall_curve.png`: curva Precision-Recall.
+- `reports/figures/feature_importance.png`: variaveis mais importantes.
+- `models/rainfall_model.joblib`: melhor modelo treinado.
+
+## Proximos passos
+
+- Adicionar SHAP para explicabilidade local das previsoes.
+- Criar testes adicionais para o pipeline de treino.
+- Publicar a demo em Streamlit Community Cloud.
+
+## Licenca
+
+Este projeto esta licenciado sob a licenca MIT.
